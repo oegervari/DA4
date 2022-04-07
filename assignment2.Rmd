@@ -22,25 +22,46 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r getting data & cleaning}
-
+#gdp
+#keeping only countries and  removing country codes
 gdp <- WDI(
   start = 1992,
   end = 2018
-)
+) %>% tail( -1323) %>% select(-1)
 
+#transforming df to wide for easier filtering of any countries, which have NAs in any year
+wide_gdp <- gdp %>% pivot_wider(
+  names_from = year, 
+  values_from = NY.GDP.PCAP.KD) %>% drop_na()
+
+#transforming back to long format
+gdp <- wide_gdp %>% pivot_longer(
+  !country, 
+  names_to = "year",
+  values_to = c("NY.GDP.PCAP.KD")
+)
+#co2
 co2 <- WDI(
   start = 1992,
   end = 2018,
   indicator = "EN.ATM.CO2E.PC"
+) %>% tail( -1323) %>% select(-1)
+
+wide_co2 <- co2 %>% pivot_wider(
+  names_from = year, 
+  values_from = EN.ATM.CO2E.PC) %>% drop_na()
+
+co2 <- wide_co2 %>% pivot_longer(
+  !country, 
+  names_to = "year",
+  values_to = c("EN.ATM.CO2E.PC")
 )
 
-data <- left_join(
+#joining co2 and gdp tables
+data <- inner_join(
   x = gdp,
   y = co2,
 )
-
-data <- tail(data, -1323) # keeping only the countries
-
 ```
 
 ## Including Plots
