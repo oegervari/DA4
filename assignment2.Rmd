@@ -1,0 +1,54 @@
+---
+title: "Assignment2"
+author: "Oszkar Egervari"
+date: '2022-04-07'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(fixest)
+library(WDI)
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r getting data & cleaning}
+
+gdp <- WDI(
+  start = 1992,
+  end = 2018
+)
+
+co2 <- WDI(
+  start = 1992,
+  end = 2018,
+  indicator = "EN.ATM.CO2E.PC"
+)
+
+data <- left_join(
+  x = gdp,
+  y = co2,
+)
+
+data <- tail(data, -1323) # keeping only the countries
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
