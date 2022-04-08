@@ -1,7 +1,7 @@
 ---
-title: "Assignment2"
+title: "DA4 - Assignment 2"
 author: "Oszkar Egervari"
-date: '2022-04-07'
+date: '2022-04-08'
 output: pdf_document
 ---
 
@@ -15,7 +15,7 @@ library(WDI)
 
 ```
 
-## R Markdown
+## Introduction
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
@@ -65,14 +65,44 @@ co2 <- wide_co2 %>% pivot_longer(
 data <- inner_join(
   x = gdp,
   y = co2,
+  by = c("country", "year")
 )
 
 data <- data %>% mutate(
   country = factor(country)
 )
 ```
+## Data description
+
+```{r, echo=F}
+data_disc <- data  %>% group_by(year) %>% summarise(
+ # sum_gdppc = sum(NY.GDP.PCAP.KD),
+  avg_gdppc = round(mean(NY.GDP.PCAP.KD),2),
+  #sum_co2 = sum(EN.ATM.CO2E.PC),
+  avg_co2 = round(mean(EN.ATM.CO2E.PC),2)
+)
+```
+
+
+When we take a look at the data before diving into the models, an interesting discovery we may make, is that the average CO2 emission hasn't really changed much in the last 27 years. On the other hand, the average GDP per capita has raised from `r data_disc %>% filter(year == 1992) %>% select(avg_gdppc)` USD to  `r data_disc %>% filter(year == 2018) %>% select(avg_gdppc)` USD. I didn't include the same plot for the sum, but it looks very similar to plot of the averages seen above.
+
+```{r plot, echo=F}
+data_disc %>% pivot_longer(
+  avg_gdppc:avg_co2,
+  names_to = "indicators",
+  values_to = "values") %>% 
+  ggplot(aes(year, values)) +
+  geom_col() +
+  facet_wrap(vars(indicators)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  labs(x = "Year", y = "Amount in USD / 1000 kg")
+```
+
 
 ## Models
+
+### Model 1
 
 The first model is a cross-section OLS for year 2018. 
 
@@ -84,13 +114,9 @@ model1
 
 The intercept is `r round(model1$coefficients[1],2)`. That means that if a country has a gdp per capita of 0, its expected CO2 emission per year is `r round(model1$coefficients[1],2)` kg. The beta is `r round(model1$coefficients[2],2)`, which means that if the GDP per capita increases by 1 USD, the country's CO2 emission is expected to increase with `r round(model1$coefficients[2],2)` kg.
 
+### Model 2
 
-```{r, echo=F}
-# ggplot(data = data %>% filter(year == 2018), aes(NY.GDP.PCAP.KD, EN.ATM.CO2E.PC)) +
-#   geom_point() +
-#   geom_smooth(method='lm')
-```
-```{r model FD1, echo=FALSE}
+```{r model FD1, echo=FALSE, message=F}
 # Set the panel.id for all estimation
 setFixest_estimation(panel.id = ~country + year)
 
@@ -103,40 +129,57 @@ data <- data %>% mutate(
 
 model_fd1 <- feols(d_co2 ~ d_gdp, 
                 data = data )
+```
+
+The second model is a first difference model with time trend and without lags. The intercept means that if gdppc doesn't change, co2 emission is expected to change by `r round(model_fd1$coefficients[1],2)` kg. 
+Meanwhile beta shows us the average change in co2 emission when gdppc changes during the same period. So in case gdppc increases by 1 USD, based on the model we expect co2 emission to increase by `r round(model_fd1$coefficients[2],2)` kg.
+
+```{r, echo=F}
 model_fd1
 ```
-The third model is a first difference model with time trend and without lags.
 
-```{r model FD2, echo=F}
+### Model 3
+
+```{r model FD2, echo=F, message=F}
 #data = panel(data, panel.id = c('country', 'year'))
 
 model_fd2 <- feols(d_co2 ~ l(d_gdp,0:2),
                  data = data)
 model_fd2
 ```
-The fourth model is also a first difference model with time trend, but this time with 2 years of lag.
 
-```{r model FD3, echo=F}
+The third model is also a first difference model with time trend, but this time with 2 years of lag. These values show the lagged associations, the effect of the change of gdppc on co2 emission in the following years. 
+So `r round(model_fd2$coefficients[4],2)` is the coefficient of the year 2 lag, meaning that in case of 1 USD increase in gdppc, co2 emission is expected to raise by 0.05 kg on average 2 years later. 
+
+### Model 4
+
+```{r model FD3, echo=F, message=F}
 model_fd3 <- feols(d_co2 ~ l(d_gdp,0:6),
                  data = data)
 model_fd3
 ```
-The fifth model is the last of the first difference models, with 6 years of lag this time.
+
+The fourth model is the last of the first difference models, with 6 years of lag this time. This is pretty much the same as the previous model, but with more lags. We can see, that year 6 lag has a negative coefficient interestingly, resulting in a decrease in expected co2 emission by `r round(model_fd3$coefficients[8],2)*-1` kg in case of 1 USD increase in gdppc within 6 years.
+
+### Model 5
+
 
 ```{r model FE, echo=F}
 model_fe <- feols( EN.ATM.CO2E.PC ~ NY.GDP.PCAP.KD + year | country , 
                 data = data,
                 cluster = "country" 
                 )
-View(model_fe)
-
+model_fe
 ```
 
-The sixth model is a fixed effects model.
+The fifth model is a fixed effects model with time and country fixed effects
+The coefficient estimate means that when we compare years with the same countries, in years when the gpdpc is higher by 1 USD, co2 emission tends to be `r round(model_fe$coefficients[1],2)` kg higher than its average within the country.
+
+### Model 6
 
 ```{r model long diff, echo=F}
 #creating new table with values only from 1992 and 2018
-data_long_diff <- data %>% filter((year == 2018)|(year == 1992)) %>% 
+data_long_diff <- data %>% filter((year == 2018)|(year == 1992)) %>% select(-c(d_gdp, d_co2)) %>% 
   pivot_wider(
     names_from = year,
     values_from = c(NY.GDP.PCAP.KD, EN.ATM.CO2E.PC)
@@ -149,10 +192,18 @@ data_long_diff <- data_long_diff %>% mutate(
 
 #model
 model_fd4 <- feols(d_co2 ~ d_gdp,
-                 data = data_long_diff)
+                 data = data_long_diff,
+                 cluster = "country")
 model_fd4
+
+# model_fd4 <-lm(
+#   d_co2 ~ d_gdp,
+#   data = data_long_diff
+# )
+# model_fd4
 ```
 
-
+The last of the models is a long difference model, which takes the difference of the variables from two years, which are far apart. In this case I chose the first and last years, 1992 and 2018 respectively. 
+The intercept means that if the gdppc doesn't change, the expected average change in co2 emission is `r round(model_fd4$coefficients[1],2)` kgs. The beta coefficient shows us, that if the gdppc increases by 1 USD (from 1992 to 2018), the expected average change in co2 emission is `r round(model_fd4$coefficients[2],2)`, so it decreases. 
 
 
