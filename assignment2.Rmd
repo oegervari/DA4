@@ -17,9 +17,12 @@ library(WDI)
 
 ## Introduction
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This assignment I will try to find out, to what extent does economic activity cause CO2 emission. I am going to use GDP per capita to measure the economic activity of a country. I'm going to explore this relationship with the help of various models ranging from cross-sectional OLS through fixed effects models to multiple first difference models. 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## The Data
+
+The data is acquired from World Bank through the WDI R library, both the GDP per capita and the CO2 per capita emissions. The gdppc is in USD, while the co2 is in metric ton, which I converted to kgs. The time period is between 1992 and 2018 and for all countries having a full set of data for both indicators for all years.
+I decided to keep only countries without missing values, because I couldn't think of a good solution make up for the missing data. If I use 0 instead of NAs, the means will be lowered quite significantly, however if I take the average values, it increase the mean, because mostly developing countries with lower than average values of gdppc and co2 emissions are missing these values. After dropping them the data still has 161 countries, so I figured this is the best option.
 
 ```{r getting data & cleaning, echo=F}
 #gdp
@@ -72,6 +75,7 @@ data <- data %>% mutate(
   country = factor(country)
 )
 ```
+
 ## Data description
 
 ```{r, echo=F}
@@ -205,5 +209,13 @@ model_fd4
 
 The last of the models is a long difference model, which takes the difference of the variables from two years, which are far apart. In this case I chose the first and last years, 1992 and 2018 respectively. 
 The intercept means that if the gdppc doesn't change, the expected average change in co2 emission is `r round(model_fd4$coefficients[1],2)` kgs. The beta coefficient shows us, that if the gdppc increases by 1 USD (from 1992 to 2018), the expected average change in co2 emission is `r round(model_fd4$coefficients[2],2)`, so it decreases. 
+
+## Summary
+
+The main finding of the assignment is that there is a positive correlation between gdppc and co2 emission. However it's not that simple, because there is a clear trend - most likely in first world countries - to decrease or at least not increase their co2 emissions in the last couple years, meanwhile their gdppc is increasing still. This is however only my assumption, further analysis would be required to say more on this topic, perhaps aggregating the indicators to at least developing and developed countries, or even something more sophisticated. 
+
+I believe that interestingly the same mechanism is behind both outcomes, increasing co2 emission for developing countries and decreasing co2 emission for developed countries, which is increasing gdp or gdppc. 
+Developing countries doesn't yet have the resources to abandon fossil fuel sources, meanwhile developed countries - since they are already developed - can focus on research and can afford to lose (at least initially) resources in order to switch to more sustainable energy sources.
+
 
 
