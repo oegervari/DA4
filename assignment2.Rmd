@@ -5,7 +5,7 @@ date: '2022-04-07'
 output: pdf_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=F, warning=F}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
@@ -66,6 +66,10 @@ data <- inner_join(
   x = gdp,
   y = co2,
 )
+
+data <- data %>% mutate(
+  country = factor(country)
+)
 ```
 
 ## Models
@@ -81,12 +85,73 @@ model1
 The intercept is `r round(model1$coefficients[1],2)`. That means that if a country has a gdp per capita of 0, its expected CO2 emission per year is `r round(model1$coefficients[1],2)` kg. The beta is `r round(model1$coefficients[2],2)`, which means that if the GDP per capita increases by 1 USD, the country's CO2 emission is expected to increase with `r round(model1$coefficients[2],2)` kg.
 
 
-```{r}
-ggplot(data = data %>% filter(year == 2018), aes(NY.GDP.PCAP.KD, EN.ATM.CO2E.PC)) +
-  geom_point() +
-  geom_smooth(method='lm')
+```{r, echo=F}
+# ggplot(data = data %>% filter(year == 2018), aes(NY.GDP.PCAP.KD, EN.ATM.CO2E.PC)) +
+#   geom_point() +
+#   geom_smooth(method='lm')
+```
+```{r model FD1, echo=FALSE}
+# Set the panel.id for all estimation
+setFixest_estimation(panel.id = ~country + year)
+
+#adding lags
+data <- data %>% mutate(
+  d_gdp = NY.GDP.PCAP.KD - lag(NY.GDP.PCAP.KD),
+  d_co2 = EN.ATM.CO2E.PC - lag(EN.ATM.CO2E.PC)
+  
+)
+
+model_fd1 <- feols(d_co2 ~ d_gdp, 
+                data = data )
+model_fd1
+```
+The third model is a first difference model with time trend and without lags.
+
+```{r model FD2, echo=F}
+#data = panel(data, panel.id = c('country', 'year'))
+
+model_fd2 <- feols(d_co2 ~ l(d_gdp,0:2),
+                 data = data)
+model_fd2
+```
+The fourth model is also a first difference model with time trend, but this time with 2 years of lag.
+
+```{r model FD3, echo=F}
+model_fd3 <- feols(d_co2 ~ l(d_gdp,0:6),
+                 data = data)
+model_fd3
+```
+The fifth model is the last of the first difference models, with 6 years of lag this time.
+
+```{r model FE, echo=F}
+model_fe <- feols( EN.ATM.CO2E.PC ~ NY.GDP.PCAP.KD + year | country , 
+                data = data,
+                cluster = "country" 
+                )
+View(model_fe)
+
 ```
 
+The sixth model is a fixed effects model.
+
+```{r model long diff, echo=F}
+#creating new table with values only from 1992 and 2018
+data_long_diff <- data %>% filter((year == 2018)|(year == 1992)) %>% 
+  pivot_wider(
+    names_from = year,
+    values_from = c(NY.GDP.PCAP.KD, EN.ATM.CO2E.PC)
+  )
+
+data_long_diff <- data_long_diff %>% mutate(
+  d_gdp = NY.GDP.PCAP.KD_2018 - NY.GDP.PCAP.KD_1992,
+  d_co2 = EN.ATM.CO2E.PC_2018 - EN.ATM.CO2E.PC_1992
+)
+
+#model
+model_fd4 <- feols(d_co2 ~ d_gdp,
+                 data = data_long_diff)
+model_fd4
+```
 
 
 
