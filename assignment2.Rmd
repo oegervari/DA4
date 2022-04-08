@@ -21,7 +21,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r getting data & cleaning}
+```{r getting data & cleaning, echo=F}
 #gdp
 #keeping only countries and  removing country codes
 gdp <- WDI(
@@ -45,7 +45,11 @@ co2 <- WDI(
   start = 1992,
   end = 2018,
   indicator = "EN.ATM.CO2E.PC"
-) %>% tail( -1323) %>% select(-1)
+) %>% tail( -1323) %>% select(-1) %>% 
+  # transforming tons to kg
+  mutate(
+      EN.ATM.CO2E.PC = EN.ATM.CO2E.PC * 1000
+  )
 
 wide_co2 <- co2 %>% pivot_wider(
   names_from = year, 
@@ -64,12 +68,26 @@ data <- inner_join(
 )
 ```
 
-## Including Plots
+## Models
 
-You can also embed plots, for example:
+The first model is a cross-section OLS for year 2018. 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r model 1, echo=FALSE}
+
+model1 <- feols( EN.ATM.CO2E.PC ~ NY.GDP.PCAP.KD , data = data %>% filter(year == 2018) )
+model1
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+The intercept is `r round(model1$coefficients[1],2)`. That means that if a country has a gdp per capita of 0, its expected CO2 emission per year is `r round(model1$coefficients[1],2)` kg. The beta is `r round(model1$coefficients[2],2)`, which means that if the GDP per capita increases by 1 USD, the country's CO2 emission is expected to increase with `r round(model1$coefficients[2],2)` kg.
+
+
+```{r}
+ggplot(data = data %>% filter(year == 2018), aes(NY.GDP.PCAP.KD, EN.ATM.CO2E.PC)) +
+  geom_point() +
+  geom_smooth(method='lm')
+```
+
+
+
+
+
