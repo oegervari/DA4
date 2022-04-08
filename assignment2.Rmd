@@ -17,7 +17,7 @@ library(WDI)
 
 ## Introduction
 
-This assignment I will try to find out, to what extent does economic activity cause CO2 emission. I am going to use GDP per capita to measure the economic activity of a country. I'm going to explore this relationship with the help of various models ranging from cross-sectional OLS through fixed effects models to multiple first difference models. 
+This assignment I will try to find out, to what extent does economic activity cause CO2 emission. I am going to use GDP per capita to measure the economic activity of a country. I'm going to explore this relationship with the help of various models ranging from cross-sectional OLS through fixed effects models to multiple first difference models. The code is available on [github](https://github.com/oegervari/DA4).
 
 ## The Data
 
